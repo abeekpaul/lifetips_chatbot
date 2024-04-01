@@ -1,125 +1,93 @@
-from asyncore import dispatcher_with_send
 import os
 import logging
-from httpx import QueryParams
 import redis
-import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
-from telegram.ext.filters import MessageFilter
-import logging
-from telegram.ext import MessageHandler
-from telegram.ext import Filters
-from ChatGPT import HKBU_ChatGPT
-from telegram.ext import MessageHandler, Filters, CommandHandler, CallbackQueryHandler
-import aws_params
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, MessageHandler, Filters
+from apscheduler.schedulers.background import BackgroundScheduler
+from chatbot import ChatbotAssistant
+import bot_config  # Assumes AWS and bot configuration parameters are in this module
 
-
-
-def equiped_chatgpt(update: Update, context: CallbackContext) -> None:
-    global chatgpt
-    personalizedPrompt = "Discussing movies and TVshows : "
-    prompt = personalizedPrompt + update.message.text
-    reply_message = hkbu_chatgpt.submit(prompt)
-    logging.info("Update: " + str(update))
-    logging.info("context: " + str(context))
-    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_message)
-
-# Instantiate HKBU_ChatGPT
-hkbu_chatgpt = HKBU_ChatGPT()
-
-r=redis.Redis(host=aws_params.REDIS_HOST, port=int(aws_params.REDIS_PORT), password=aws_params.REDIS_PASSWORD)
-
-# Initial Logging Configuration
+# Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# 用于创建返回和主菜单按钮的函数
-def back_to_main_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Return to Start", callback_data='start')],
-        [InlineKeyboardButton("Help", callback_data='help')]
-    ])
+# Initialize Redis connection
+redis_client = redis.Redis(host=bot_config.REDIS_HOST, port=int(bot_config.REDIS_PORT), password=bot_config.REDIS_PASSWORD)
+
+# Initialize Chatbot Assistant
+chatbot_assistant = ChatbotAssistant()
+
+def send_chatbot_reply(update: Update, context: CallbackContext) -> None:
+    user_message = update.message.text
+    life_tips_prompt = f"Providing life tips: {user_message}"
+    try:
+        reply_message = chatbot_assistant.submit_query(life_tips_prompt)
+    except Exception as error:
+        reply_message = f"Sorry, I couldn't process your request due to an error: {error}"
+        logging.error("Error in sending chatbot reply: %s", error)
+
+    context.bot.send_message(chat_id=update.effective_chat.id, text=reply_message)
 
 def start(update: Update, context: CallbackContext) -> None:
-    welcome_text = "Welcome to the Netflix Recommendation Bot. Here you can get recommendations based on Category or Mood, and view your history."
+    welcome_message = "Welcome to the Daily Life Tips Bot. Here you can get tips to improve your day-to-day life."
 
-    buttons = [
-        [InlineKeyboardButton("Category", callback_data='category')],
-        [InlineKeyboardButton("Mode", callback_data='mode')],
-        [InlineKeyboardButton("History", callback_data='history')]
+    tip_categories = [
+        InlineKeyboardButton("Health Tips", callback_data='health_tips'),
+        InlineKeyboardButton("Productivity Tips", callback_data='productivity_tips'),
+        InlineKeyboardButton("Relationship Tips", callback_data='relationship_tips'),
+        InlineKeyboardButton("Subscribe to Daily Tips", callback_data='subscribe_daily_tips')
     ]
-    keyboard = InlineKeyboardMarkup(buttons)
-    update.message.reply_text('Please choose:', reply_markup=keyboard)
+    keyboard_layout = [[button] for button in tip_categories]
+    keyboard = InlineKeyboardMarkup(keyboard_layout)
+
+    update.message.reply_text(welcome_message, reply_markup=keyboard)
 
 def help_command(update: Update, context: CallbackContext) -> None:
-    help_text = "Use /start to start. Choose Your Preferences for Netflix Recommendations."
-    context.bot.send_message(chat_id=update.effective_chat.id, text=help_text)
+    help_message = "Use /start to begin. Get life tips or subscribe to daily updates."
+    update.message.reply_text(help_message)
 
-def button(update: Update, context: CallbackContext) -> None:
+def handle_callback_query(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
-    user_id = query.from_user.id
 
-    if query.data == 'category':
-        buttons = [
-            [InlineKeyboardButton("Sci-Fi", callback_data='category_scifi')],
-            [InlineKeyboardButton("Comedy", callback_data='category_comedy')]
-        ]
-        keyboard = InlineKeyboardMarkup(buttons)
-        query.edit_message_text(text="Choose Category:", reply_markup=keyboard)
-    elif query.data.startswith('category_'):
-        category = query.data.split('_')[1]
-        # Use HKBU GPT to get recommendation
-        try:
-            recommendation = hkbu_chatgpt.submit(f"Find some popular {category} content on Netflix.")
-            query.edit_message_text(text=recommendation)
-            # Update history
-            update_history(user_id, recommendation)
-        except Exception as e:
-            query.edit_message_text(text=f"Sorry, there was an issue with your request: {e}")
-    elif query.data == 'mode':
-        buttons = [
-            [InlineKeyboardButton("Cozy", callback_data='mode_cozy')],
-            [InlineKeyboardButton("Excited", callback_data='mode_excited')]
-        ]
-        keyboard = InlineKeyboardMarkup(buttons)
-        query.edit_message_text(text="Choose mode:", reply_markup=keyboard)
-    elif query.data.startswith('mode_'):
-        mode = query.data.split('_')[1]
-        try:
-            recommendation = hkbu_chatgpt.submit(f"Find something popular on Netflix that fits the {mode} mood!")
-            query.edit_message_text(text=recommendation)
-            # Update history
-            update_history(user_id, recommendation)
-        except Exception as e:
-            query.edit_message_text(text=f"Sorry, there was an issue with your request: {e}")
-    elif query.data == 'history':
-        history = get_history(user_id)
-        query.edit_message_text(text="Your History recommendation:\n" + history)
+    if query.data == 'health_tips':
+        send_category_tip('health', query)
+    elif query.data == 'productivity_tips':
+        send_category_tip('productivity', query)
+    elif query.data == 'relationship_tips':
+        send_category_tip('relationships', query)
+    elif query.data == 'subscribe_daily_tips':
+        toggle_subscription(query.from_user.id, query)
 
-def update_history(user_id, message):
-    # 以 user_id 为 key 存储用户的推荐历史
-    r.lpush(user_id, message)
-    r.ltrim(user_id, 0, 4)  # 只保留最近的5条记录
+def send_category_tip(category: str, query):
+    try:
+        tip_message = chatbot_assistant.submit_query(f"Give me a life tip about {category}.")
+        query.edit_message_text(text=tip_message)
+    except Exception as error:
+        query.edit_message_text(text=f"Sorry, there was an issue with your request: {error}")
 
-def get_history(user_id):
-    # Fetch the entire history
-    full_history = [f"{idx + 1}. {item.decode('utf-8')}" for idx, item in enumerate(r.lrange(user_id, 0, -1))]
-    # Get the last part of the history (e.g., last 5 items)
-    last_part_history = full_history[-5:]
-    return '\n'.join(last_part_history)
-
+def toggle_subscription(user_id: int, query):
+    subscription_key = f'daily_tip_subscribed_{user_id}'
+    if redis_client.get(subscription_key):
+        redis_client.delete(subscription_key)
+        query.edit_message_text(text="You have unsubscribed from the Daily Tips.")
+    else:
+        redis_client.set(subscription_key, 'true')
+        query.edit_message_text(text="You're now subscribed to Daily Tips!")
 
 def main():
-    token = aws_params.TG_ACCESS_TOKEN
-
-    updater = Updater(token, use_context=True)
+    updater = Updater(bot_config.TELEGRAM_ACCESS_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help_command))
-    dispatcher.add_handler(CallbackQueryHandler(button))
-    dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), equiped_chatgpt))
+    dispatcher.add_handler(CallbackQueryHandler(handle_callback_query))
+    dispatcher.add_handler(MessageHandler(Filters.text & (~Filters.command), send_chatbot_reply))
+
+    # Set up the Background Scheduler for daily tips
+    scheduler = BackgroundScheduler()
+    # Assume schedule_daily_tips function is defined elsewhere to schedule the tips
+    # schedule_daily_tips(scheduler)
+    scheduler.start()
 
     updater.start_polling()
     updater.idle()

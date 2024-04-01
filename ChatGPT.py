@@ -1,31 +1,36 @@
 import requests
-import aws_params
+import bot_config  # Renamed aws_params to bot_config for clarity
 
-class HKBU_ChatGPT:
+class ChatbotAssistant:
     def __init__(self):
-        self.telegram_token = aws_params.TG_ACCESS_TOKEN
-        self.basic_url = aws_params.GPT_BASICURL
-        self.model_name = aws_params.GPT_MODELNAME
-        self.api_version = aws_params.GPT_APIVERSION
-        self.access_token = aws_params.GPT_ACCESS_TOKEN
+        self.telegram_token = bot_config.TELEGRAM_ACCESS_TOKEN
+        self.endpoint_url = f"{bot_config.CHATGPT_BASE_URL}/deployments/{bot_config.CHATGPT_MODEL_NAME}/chat/completions"
+        self.api_version = bot_config.CHATGPT_API_VERSION
+        self.access_token = bot_config.CHATGPT_ACCESS_TOKEN
 
-        # rest of your code
-
-    def submit(self, message):
-        conversation = [{"role": "user", "content": message}]
-        url = self.basic_url + "/deployments/" + self.model_name + "/chat/completions/?api-version=" + self.api_version
-        headers = {'Content-Type': 'application/json', 'api-key': self.access_token}
+    def submit_query(self, query):
+        conversation = [{"role": "user", "content": query}]
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f"Bearer {self.access_token}"
+        }
+        params = {'api-version': self.api_version}
         payload = {'messages': conversation}
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
+
+        try:
+            response = requests.post(self.endpoint_url, params=params, json=payload, headers=headers)
+            response.raise_for_status()  # This will raise an HTTPError if the HTTP request returned an unsuccessful status code
             data = response.json()
             return data['choices'][0]['message']['content']
-        else:
-            return 'Error:', response
+        except requests.HTTPError as http_err:
+            return f"HTTP error occurred: {http_err}"
+        except Exception as err:
+            return f"An error occurred: {err}"
 
 if __name__ == '__main__':
-    ChatGPT_test = HKBU_ChatGPT()
+    chatbot = ChatbotAssistant()
+    print("ChatGPT Assistant is running. Type something to begin a conversation.")
     while True:
-        user_input = input("Typing anything to ChatGPT:\t")
-        response = ChatGPT_test.submit(user_input)
-        print(response)
+        user_input = input("You: ")
+        response = chatbot.submit_query(user_input)
+        print("ChatGPT:", response)
