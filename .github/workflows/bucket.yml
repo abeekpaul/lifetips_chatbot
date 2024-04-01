@@ -21,9 +21,4 @@ jobs:
           aws-region: ap-northeast-1
 
       - name: Sync
-        run: |
-          aws s3 sync . s3://bucket-j8k8zj
-          --exclude '.github/*'
-          --exclude '.gitignore'
-          --exclude 'config.ini'
-          --exclude 'dockerfile'
+        run: aws s3 sync . s3://bucket-j8k8zj --exclude '.github/*' --exclude '.gitignore' --exclude 'config.ini' --exclude 'dockerfile'
