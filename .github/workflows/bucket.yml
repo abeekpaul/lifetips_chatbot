@@ -23,10 +23,7 @@ jobs:
       - name: Sync
         run: |
           aws s3 sync . s3://bucket-j8k8zj
-          --exclude '.git/*'
           --exclude '.github/*'
-          --exclude '.ipynb_checkpoints/*'
-          --exclude '__pycache__/*'
           --exclude '.gitignore'
           --exclude 'config.ini'
           --exclude 'dockerfile'
