@@ -1,0 +1,31 @@
+name: Deploy S3 Bucket
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_BUCKET_ACCESS }}
+          aws-secret-access-key: ${{ secrets.AWS_BUCKET_SECRET }}
+          aws-region: ap-northeast-1
+
+
+      - name: Sync
+        run: aws s3 sync . s3://bucket-j8k8zj
+        --exclude '.git/*' 
+        --exclude '.github/*' 
+        --exclude '.ipynb_checkpoints/*' 
+        --exclude '__pycache__/*' 
+        --exclude '.gitignore' 
+        --exclude 'config.ini' 
+        --exclude 'dockerfile'
