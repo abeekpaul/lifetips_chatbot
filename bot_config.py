@@ -1,3 +1,5 @@
+pip install boto3
+
 import boto3
 
 # Set AWS region
