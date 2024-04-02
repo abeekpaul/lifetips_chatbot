@@ -1,11 +1,18 @@
+from asyncore import dispatcher_with_send
 import os
 import logging
+from httpx import QueryParams
 import redis
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext, MessageHandler, Filters
-from apscheduler.schedulers.background import BackgroundScheduler
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
+from telegram.ext.filters import MessageFilter
+import logging
+from telegram.ext import MessageHandler
+from telegram.ext import Filters
 from chatbot import ChatbotAssistant
-import bot_config  # Assumes AWS and bot configuration parameters are in this module
+from telegram.ext import MessageHandler, Filters, CommandHandler, CallbackQueryHandler
+import bot_config
 
 # Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -75,7 +82,7 @@ def toggle_subscription(user_id: int, query):
         query.edit_message_text(text="You're now subscribed to Daily Tips!")
 
 def main():
-    updater = Updater(bot_config.TELEGRAM_ACCESS_TOKEN, use_context=True)
+    updater = Updater(bot_config.TG_ACCESS_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))

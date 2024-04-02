@@ -1,12 +1,12 @@
 import requests
-import bot_config  # Renamed aws_params to bot_config for clarity
+import bot_config
 
 class ChatbotAssistant:
     def __init__(self):
-        self.telegram_token = bot_config.TELEGRAM_ACCESS_TOKEN
-        self.endpoint_url = f"{bot_config.CHATGPT_BASE_URL}/deployments/{bot_config.CHATGPT_MODEL_NAME}/chat/completions"
-        self.api_version = bot_config.CHATGPT_API_VERSION
-        self.access_token = bot_config.CHATGPT_ACCESS_TOKEN
+        self.telegram_token = bot_config.TG_ACCESS_TOKEN
+        self.endpoint_url = f"{bot_config.GPT_BASICURL}/deployments/{bot_config.GPT_MODELNAME}/chat/completions"
+        self.api_version = bot_config.GPT_APIVERSION
+        self.access_token = bot_config.GPT_ACCESS_TOKEN
 
     def submit_query(self, query):
         conversation = [{"role": "user", "content": query}]
@@ -19,7 +19,7 @@ class ChatbotAssistant:
 
         try:
             response = requests.post(self.endpoint_url, params=params, json=payload, headers=headers)
-            response.raise_for_status()  # This will raise an HTTPError if the HTTP request returned an unsuccessful status code
+            response.raise_for_status()
             data = response.json()
             return data['choices'][0]['message']['content']
         except requests.HTTPError as http_err:

@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY . /app
 
+RUN pip install update
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 80
@@ -15,4 +16,4 @@ ENV REDIS_HOST='redis-15520.c1.asia-northeast1-1.gce.cloud.redislabs.com'
 ENV REDIS_PORT=15520
 ENV REDIS_PASSWORD='BlsPHMJv1itLfwUOQNzpRbdOIgergLOG'
 
-CMD ["python", "lifetips_chatbot.py"]
+CMD python lifetips_chatbot.py
