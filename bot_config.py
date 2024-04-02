@@ -3,7 +3,7 @@ pip install boto3
 import boto3
 
 # Set AWS region
-region_name = 'ap-northeast-2'
+region_name = 'ap-southeast-2'
 
 # Create SSM client
 ssm = boto3.client('ssm', region_name=region_name)
