@@ -4,33 +4,27 @@ import bot_config
 class ChatbotAssistant:
     def __init__(self):
         self.telegram_token = bot_config.TG_ACCESS_TOKEN
-        self.endpoint_url = f"{bot_config.GPT_BASICURL}/deployments/{bot_config.GPT_MODELNAME}/chat/completions"
+        self.basic_url = bot_config.GPT_BASICURL
+        self.model_name = bot_config.GPT_MODELNAME
         self.api_version = bot_config.GPT_APIVERSION
         self.access_token = bot_config.GPT_ACCESS_TOKEN
 
-    def submit_query(self, query):
-        conversation = [{"role": "user", "content": query}]
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f"Bearer {self.access_token}"
-        }
-        params = {'api-version': self.api_version}
-        payload = {'messages': conversation}
 
-        try:
-            response = requests.post(self.endpoint_url, params=params, json=payload, headers=headers)
-            response.raise_for_status()
+    def submit(self, message):
+        conversation = [{"role": "user", "content": message}]
+        url = self.basic_url + "/deployments/" + self.model_name + "/chat/completions/?api-version=" + self.api_version
+        headers = {'Content-Type': 'application/json', 'api-key': self.access_token}
+        payload = {'messages': conversation}
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 200:
             data = response.json()
             return data['choices'][0]['message']['content']
-        except requests.HTTPError as http_err:
-            return f"HTTP error occurred: {http_err}"
-        except Exception as err:
-            return f"An error occurred: {err}"
+        else:
+            return 'Error:', response
 
 if __name__ == '__main__':
-    chatbot = ChatbotAssistant()
-    print("ChatGPT Assistant is running. Type something to begin a conversation.")
+    ChatGPT_test = ChatbotAssistant()
     while True:
-        user_input = input("You: ")
-        response = chatbot.submit_query(user_input)
-        print("ChatGPT:", response)
+        user_input = input("Typing anything to ChatGPT:\t")
+        response = ChatGPT_test.submit(user_input)
+        print(response)

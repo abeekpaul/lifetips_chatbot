@@ -1,5 +1,3 @@
-pip install boto3
-
 import boto3
 
 # Set AWS region
@@ -18,4 +16,4 @@ GPT_APIVERSION = get_parameter('GPT_APIVERSION')
 GPT_ACCESS_TOKEN = get_parameter('GPT_ACCESS_TOKEN')
 REDIS_HOST = get_parameter('REDIS_HOST')
 REDIS_PORT = get_parameter('REDIS_PORT')
-REDIS_PASSWORD = get_parameter('REDIS_PASSWORD')
+REDIS_PASSWORD = get_parameter('REDIS_PASSWORD')   

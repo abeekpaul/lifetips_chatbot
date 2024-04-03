@@ -3,10 +3,10 @@ WORKDIR /app
 
 COPY . /app
 
-RUN pip install update
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 80
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 ENV TELEGRAM_ACCESS_TOKEN="6903048598:AAGnNHA-om65R68Xj-W41BM0xRhmSnogfTU"
@@ -20,3 +20,8 @@ ENV REDIS_PASSWORD='YzUKO7HUcdHQCZ6Ps0eb1EEF2Al1moJ0wAzCaJfIIEw='
 >>>>>>> f131460 (update)
 
 CMD python lifetips_chatbot.py
+=======
+
+
+CMD ["python", "lifetips_chatbot.py"]
+>>>>>>> 8484a41 (fixed parameter access error)
